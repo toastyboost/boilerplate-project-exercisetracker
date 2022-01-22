@@ -8,64 +8,76 @@ router.post('/', (req, res) => {
     res.sendFile(__dirname + '/views/index.html')
 })
  
-router.get('/api/users', function(req, res) {
+router.get('/api/users', async (req, res) => {
   const { username } = req.body;
-  const user = await User.create({ username });
-  res.send(user);
+
+  try {
+    const user = await User.create({ username });
+    res.send(user);
+  } catch (err) {
+    res.send(err);
+  }
+ 
 });
 
 router.post("/api/users/:_id/exercises", async (req, res) => {
-  let { _id } = req.params;
-  let { description, duration, date } = req.body;
 
-  const exercise = await Exercise.create({
-    userId: _id,
-    description,
-    duration,
-    date,
-  });
+  const { description, duration, date } = req.body;
+  const { _id } = req.params;
 
-  const { username } = await User.findById(userId);
+  try {
+    const exercise = await Exercise.create({
+      userId: _id,
+      description,
+      duration,
+      date,
+    });
+  
+    const { username } = await User.findById(userId);
 
-  const result = {
-    _id: userId, 
-    username, 
-    description, 
-    duration, 
-    date: formatDate(date) 
+    if (!username) {
+      throw new Error('User does not exist')
+    } 
+    
+    const responce = {
+      _id: userId, 
+      username, 
+      description, 
+      duration, 
+      date: date || +new Date()
+    }
+  
+    res.send(responce);
+  } catch (err) {
+    res.send(err);
   }
-
-  res.send(result);
 });
 
 app.get(
   "/api/users/:_id/logs", async (req, res) => {
- 
-    const parsedUrl = url.parse(req.url);
-    // ❗️if limit is undefined, limit() will simply return all found documents
-    let { from, to, limit } = querystring.parse(parsedUrl.query);
-    // if abscent, replace them with boundary dates.
-    from = from || "0001";
-    to = to || "3000";
-    // query username
-    let { _id: userId } = req.params;
-    const { username } = await User.findById(userId);
-    // query exercises
-    const foundExercises = await Exercise.find({
-      $and: [
-        { userId },
-        // ❗️If use mongodb driver instead then should replace new Date() with ISODate()
-        { date: { $gte: new Date(from), $lte: new Date(to) } },
-      ],
-    }).limit(limit);
-    const log = foundExercises.map(({ description, duration, date }) => ({
-      description,
-      duration,
-      date: formatDate(date),
-    }));
+    const { _id, url } = req.params;
+    const { from = null, to = null, limit = 0 } = req.query;
 
-    let count = log.length;
-    // send back data
-    res.send({ _id: userId, count, username, log });
+    try {
+      const { username } = await User.findById(_id);
+      const exercises = await Exercise.find({ userId: _id })
+        
+      const logs = exercises
+        .filter(({ date }) => {
+          if (from) return date >= from
+          if (to) return date <= to
+          return false
+        });
+
+      if (limit) {
+        logs.slice(0, limit);
+      }
+
+      res.send({ username, logs });
+
+    } catch (err) {
+      res.send(err);
+    }
+     
   },
 );
