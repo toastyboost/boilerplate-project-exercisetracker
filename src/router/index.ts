@@ -23,10 +23,13 @@ router.post('/users', async (req, res) => {
       }
     }
 
-    const user = await User.create({ username });
-    res.send(user);
+    const user = await User.create({ username })
+
+    res.json(user);
   } catch (err: any) {
-    res.status(err.status).send(err)
+    const status = err.code || 500
+    const message = err.message || err.toString()
+    res.status(status).send(message)
   }
 });
 
@@ -38,7 +41,7 @@ router.get('/users', async (req, res) => {
     const users: any = await User.find({})
     res.send(mapUsers(users));
   } catch (err) {
-    res.send(err);
+    res.json(err);
   }
 });
 
@@ -76,7 +79,9 @@ router.post("/users/:_id/exercises", async (req, res) => {
 
     res.send(exercise);
   } catch (err: any) {
-    res.status(err.code).send(err);
+    const status = err.code || 500
+    const message = err.message || err.toString()
+    res.status(status).send(message)
   }
 });
 
@@ -114,8 +119,10 @@ router.get(
         count,
         logs
       });
-    } catch (err) {
-      res.send(err);
+    } catch (err: any) {
+      const status = err.code || 500
+      const message = err.message || err.toString()
+      res.status(status).send(message)
     }
   },
 );
