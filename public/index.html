@@ -10,7 +10,7 @@
   <body>
     <div class="container">
       <h1>Exercise tracker</h1>
-      <form action="/api/users" method="post">
+      <form id="username-form">
         <h3>Create a New User</h3>
         <p><code>POST /api/users</code></p>
         <input id="uname" type="text" name="username" placeholder="username" />
@@ -33,14 +33,50 @@
       <p><strong>from, to</strong> = dates (yyyy-mm-dd); <strong>limit</strong> = number</p>
     </div>
     <script>
-      const exerciseForm = document.getElementById("exercise-form");
+      // post user
 
-      exerciseForm.addEventListener("submit", () => {
-        const userId = document.getElementById("uid").value;
-        exerciseForm.action = `/api/users/${userId}/exercises`;
+      const usernameForm = document.getElementById("username-form");
 
-        exerciseForm.submit();
+      usernameForm.addEventListener("submit", (e) => {
+        e.preventDefault()
+
+        const username = e.target['uname'].value
+
+        fetch("/api/users", {
+          method: "POST",
+          headers: {'Content-Type': 'application/json'}, 
+          body: JSON.stringify({ username })
+        })
+ 
+        usernameForm.reset()
       });
+
+      // post exercise
+
+      const exerciseForm = document.getElementById("exercise-form");
+       
+      exerciseForm.addEventListener("submit", (e) => {
+        e.preventDefault()
+
+        const uid = e.target['uid'].value
+        const description = e.target['desc'].value
+        const duration = e.target['dur'].value
+        const date = e.target['date'].value
+
+        fetch(`/api/users/${uid}/exercises`, {
+          method: "POST",
+          headers: {'Content-Type': 'application/json'}, 
+          body: JSON.stringify({ 
+            description, 
+            duration, 
+            date 
+          })
+        })
+      
+        // exerciseForm.reset()
+      });
+
+
     </script>
   </body>
 </html>
