@@ -1,7 +1,9 @@
-import express from 'express'
+import express, { Request, Response } from 'express'
+import { validationResult } from 'express-validator/check';
 
 import { User, mapUsers, Exercise } from "../models"
 import { toTs } from "../utils/format";
+import { validate } from "../utils/validate"
 
 export const router = express.Router()
 
@@ -25,7 +27,7 @@ router.post('/users', async (req, res) => {
 
     const user = await User.create({ username })
 
-    res.json(user);
+    res.send(user);
   } catch (err: any) {
     const status = err.code || 500
     const message = err.message || err.toString()
@@ -41,7 +43,7 @@ router.get('/users', async (req, res) => {
     const users: any = await User.find({})
     res.send(mapUsers(users));
   } catch (err) {
-    res.json(err);
+    res.send(err);
   }
 });
 
@@ -60,18 +62,15 @@ router.post("/users/:_id/exercises", async (req, res) => {
   const id = req.params._id;
 
   try {
-
-    const { _id } = await User.findById(id);
-
-    if (!_id) {
+    const { _id: userId } = await User.findById(id).catch((err) => {
       throw {
         code: '404',
-        errorMessage: 'User does not exist'
+        message: "User not found"
       }
-    }
+    });
 
     const exercise = await Exercise.create({
-      userId: _id,
+      userId,
       description,
       duration,
       date
@@ -93,13 +92,27 @@ router.post("/users/:_id/exercises", async (req, res) => {
 // ✅ from and to are dates in yyyy-mm-dd format. limit is an integer of how many logs to send back.
 
 router.get(
-  "/users/:_id/logs", async (req, res) => {
-    const { _id } = req.params;
-    const { from = '', to = '', limit = 0 } = req.query;
+  "/users/:_id/logs", validate.params.logs, async (req: Request, res: Response) => {
+    const { _id: userId } = req.params
+    const { from, to, limit = 0 } = req.query
 
     try {
-      const { username } = await User.findById(_id);
-      const exercises = await Exercise.find({ userId: _id })
+
+      if (limit) {
+        const validationErrors = validationResult(req)
+        if (!validationErrors.isEmpty()) {
+          const message = validationErrors.array()
+          return res.status(400).send({
+            code: 400,
+            message
+          });
+        }
+      }
+
+      const { username } = await User.findById(userId)
+      const exercises = await Exercise.find({ userId })
+
+      const total = exercises.length // ✅ total count of logs
 
       const logs = exercises
         .filter(({ date }) => {
@@ -109,14 +122,12 @@ router.get(
         });
 
       if (limit) {
-        logs.splice(Number(limit));
+        logs.splice(Number(limit))
       }
-
-      const count = logs.length;
 
       res.send({
         username,
-        count,
+        total,
         logs
       });
     } catch (err: any) {

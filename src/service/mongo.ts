@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const pass = encodeURIComponent('password_here')
+const pass = encodeURIComponent(process.env.mongodb_pass || 'cytmEt_x6V@@fq*')
 const uri = `mongodb+srv://admin:${pass}@cluster0.xjlfz.mongodb.net/users?retryWrites=true&w=majority`;
 
 mongoose.connect(uri);
